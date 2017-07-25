@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-import os, signal, json, gi, time, requests
+import os, signal, json, gi, time, requests, socket
 
 gi.require_version('AppIndicator3', '0.1')
 gi.require_version('Gtk', '3.0')
@@ -12,10 +12,15 @@ from gi.repository import AppIndicator3 as appindicator
 class PrayerTimingIndicator: 
     def __init__(self):
         self.PRAYER_TIMINGS_API = 'http://api.aladhan.com/timings/{0}?latitude={1}&longitude={2}&method2'
+        self.PRAYER_TIMINGS_API_HOST = 'http://api.aladhan.com/'
         self.GOOGLE_API = 'https://maps.googleapis.com/maps/api/geocode/json'
         self.location = 'Milton, ON'
         self.prayers = ["Fajr", "Dhuhr", "Asr", "Maghrib", "Isha"]
         self.APPINDICATOR_ID = 'myappindicator'
+
+        self.internet = True
+        self.raw_timings = []
+        self.process_timings = []
 
         self.status = appindicator.IndicatorStatus.ACTIVE
         self.type = appindicator.IndicatorCategory.SYSTEM_SERVICES
@@ -26,28 +31,49 @@ class PrayerTimingIndicator:
     def initialIndicator(self):
         signal.signal(signal.SIGINT, signal.SIG_DFL)
         self.indicator.set_status(self.status)
-        self.indicator.set_menu(self.prayerTimings())
+        self.indicator.set_menu(self.createMenu())
 
     def runIndicator(self):
         gtk.main()
 
-    def prayerTimings(self):
-        menu = gtk.Menu()
-        timings = self.processPrayerTimings()
-        for prayer in self.prayers:
-            time = timings[prayer]
-            layout = "{0} {1}"
-            layout = layout.format(prayer,time)
-            item1 = gtk.MenuItem(layout)
-            menu.append(item1)
+    def processPrayerTimings(self):
+        prayersTimings = self.raw_timings
+        timings = {}
+        for timingName in prayersTimings:
+            if timingName in self.prayers:
+                timeToDisplay = datetime.strptime(prayersTimings[timingName], "%H:%M")
+                timings[timingName] = timeToDisplay.strftime("%I:%M %p")
+        self.process_timings = timings
 
-        menu.append(gtk.SeparatorMenuItem())
+    def addUtilityMenuOptions(self, menu):
         item_quit = gtk.MenuItem('Quit')
         item_quit.connect('activate', self.quit)
         menu.append(item_quit)    
+
+    def createMenu(self):
+        menu = gtk.Menu()
+        self.fetchPrayersTimings()
+        
+        if self.internet:
+            self.processPrayerTimings()
+            self.prayerTimings(menu)
+        else:
+            pass
+
+        self.addUtilityMenuOptions(menu)
         menu.show_all()
         return menu
 
+    def prayerTimings(self, menu):
+        timings = self.process_timings
+        prayers = self.prayers
+        for prayer in prayers:
+            time = timings[prayer]
+            layout = "{0:20s}{1}".format(prayer,time)
+            item1 = gtk.MenuItem(layout)
+            menu.append(item1)
+        menu.append(gtk.SeparatorMenuItem())
+                    
     def quit(self,source):
         gtk.main_quit()
 
@@ -62,19 +88,13 @@ class PrayerTimingIndicator:
         return base
         
     def fetchPrayersTimings(self):
-        request = Request(self.formattedAPI())
-        response = urlopen(request)
-        prayersTimings = json.loads(response.read().decode("utf-8"))["data"]["timings"]
-        return prayersTimings
-
-    def processPrayerTimings(self):
-        prayersTimings = self.fetchPrayersTimings()
-        timings = {}
-        for timingName in prayersTimings:
-            if timingName in self.prayers:
-                timeToDisplay = datetime.strptime(prayersTimings[timingName], "%H:%M")
-                timings[timingName] = timeToDisplay.strftime("%I:%M %p")
-        return timings
+        try:
+            request = Request(self.formattedAPI())
+            response = urlopen(request)
+            self.raw_timings = json.loads(response.read().decode("utf-8"))["data"]["timings"]
+            self.internet = True
+        except:
+            self.internet = False
 
     def getLongtitudeLatitude(self):
         params = {'sensor': 'false', 'address': self.location}
