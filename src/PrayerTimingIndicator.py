@@ -1,8 +1,10 @@
 #!/usr/bin/python3
-import os, signal, json, gi, time, requests, socket
+import os, signal, json, time, requests, socket
 
-gi.require_version('AppIndicator3', '0.1')
-gi.require_version('Gtk', '3.0')
+import pgi
+pgi.install_as_gi()
+pgi.require_version('AppIndicator3', '0.1')
+pgi.require_version('Gtk', '3.0')
 
 from datetime import datetime
 from urllib.request import Request, urlopen, URLError
@@ -24,7 +26,7 @@ class PrayerTimingIndicator:
 
         self.status = appindicator.IndicatorStatus.ACTIVE
         self.type = appindicator.IndicatorCategory.SYSTEM_SERVICES
-        self.iconPath = os.path.abspath('sample_icon.svg')
+        self.iconPath = os.path.abspath('../assets/icon.svg')
 
         self.indicator = appindicator.Indicator.new(self.APPINDICATOR_ID, self.iconPath, self.type)
 
@@ -69,9 +71,11 @@ class PrayerTimingIndicator:
         prayers = self.prayers
         for prayer in prayers:
             time = timings[prayer]
-            layout = "{0:20s}{1}".format(prayer,time)
-            item1 = gtk.MenuItem(layout)
-            menu.append(item1)
+            layout = "{0}  {1}".format(prayer,time)
+            item = gtk.MenuItem(layout)
+            item.set_hexpand(True)
+            item.set_halign(gtk.Align.END)
+            menu.append(item)
         menu.append(gtk.SeparatorMenuItem())
                     
     def quit(self,source):
