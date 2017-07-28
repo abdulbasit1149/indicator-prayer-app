@@ -33,6 +33,9 @@ class PrayerTimingIndicator:
     def initialIndicator(self):
         signal.signal(signal.SIGINT, signal.SIG_DFL)
         self.indicator.set_status(self.status)
+        self.loadDatatoMenu('activate')
+
+    def loadDatatoMenu(self,source):
         self.indicator.set_menu(self.createMenu())
 
     def runIndicator(self):
@@ -52,16 +55,31 @@ class PrayerTimingIndicator:
         item_quit.connect('activate', self.quit)
         menu.append(item_quit)    
 
+    def reconnectionButton(self, menu):
+        item_reconnect = gtk.MenuItem('re-connect...')
+        item_reconnect.connect('activate', self.loadDatatoMenu)
+        menu.append(item_reconnect)    
+
+    def connection(self, menu):
+        if self.internet:
+            item_internet = gtk.MenuItem('Connection: Yes')
+        else :
+            item_internet = gtk.MenuItem('Connection: No')
+        menu.append(item_internet)
+        menu.append(gtk.SeparatorMenuItem())
+
     def createMenu(self):
         menu = gtk.Menu()
         self.fetchPrayersTimings()
-        
+        self.connection(menu)
+
         if self.internet:
             self.processPrayerTimings()
             self.prayerTimings(menu)
         else:
-            pass
+            self.reconnectionButton(menu)
 
+        menu.append(gtk.SeparatorMenuItem())
         self.addUtilityMenuOptions(menu)
         menu.show_all()
         return menu
@@ -76,7 +94,6 @@ class PrayerTimingIndicator:
             item.set_hexpand(True)
             item.set_halign(gtk.Align.END)
             menu.append(item)
-        menu.append(gtk.SeparatorMenuItem())
                     
     def quit(self,source):
         gtk.main_quit()
