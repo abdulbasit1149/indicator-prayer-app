@@ -1,6 +1,5 @@
 #!/usr/bin/python3
 import os, signal, json, time, requests, socket
-
 import pgi
 pgi.install_as_gi()
 pgi.require_version('AppIndicator3', '0.1')
@@ -10,7 +9,6 @@ from datetime import datetime
 from urllib.request import Request, urlopen, URLError
 from gi.repository import Gtk as gtk
 from gi.repository import AppIndicator3 as appindicator
-
 class PrayerTimingIndicator: 
     def __init__(self):
         self.PRAYER_TIMINGS_API = 'http://api.aladhan.com/timings/{0}?latitude={1}&longitude={2}&method2'
@@ -51,6 +49,12 @@ class PrayerTimingIndicator:
         self.process_timings = timings
 
     def addUtilityMenuOptions(self, menu):
+        item_about = gtk.MenuItem('About')
+        menu.append(item_about)    
+
+        item_setting = gtk.MenuItem('Setting')
+        menu.append(item_setting)    
+        
         item_quit = gtk.MenuItem('Quit')
         item_quit.connect('activate', self.quit)
         menu.append(item_quit)    
